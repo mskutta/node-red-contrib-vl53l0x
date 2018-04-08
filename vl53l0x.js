@@ -10,68 +10,65 @@ MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
 ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
 OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.*/
+CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
 // REF: https://github.com/Gambiit/mcp3008.js
 
-module.exports = function(RED) {
-    "use strict";
+module.exports = function (RED) {
+  'use strict'
 
-    var api = require("./vl53l0x-api")
-    var util = require("util");
+  var Vl53l0x = require('./vl53l0x-api')
+  var util = require('util')
 
-    function Vl53l0xNode(config) {
-        RED.nodes.createNode(this, config)
-        this.bus = parseInt(config.bus) // I2C Bus Number
-        this.address = parseInt(config.address) // VL53L0X Address
-        this.interval = parseInt(config.interval) // Polling Interval
+  function Vl53l0xNode (config) {
+    RED.nodes.createNode(this, config)
+    this.bus = parseInt(config.bus) // I2C Bus Number
+    this.address = parseInt(config.address) // VL53L0X Address
+    this.interval = parseInt(config.interval) // Polling Interval
 
-        var node = this;
-        
-        var vl53l0x = new api(node.bus, node.address)
-        vl53l0x.init()
+    var node = this
 
-        this.debug(util.inspect(node),util.inspect(vl53l0x));
-        node.status({fill:"red", shape:"ring", text:"pollstop"})
-        
-        node.on("close",function(removed, done){
-            vl53l0x.close()
-            done();
-        });
+    var vl53l0x = new Vl53l0x(node.bus, node.address)
+    vl53l0x.init()
 
-        node.on("input",function(msg) {
-            if (msg.payload=="start") {
-                if (node.interval==0) {
-                    var value = vl53l0x.readRangeSingleMillimeters()
-                    msg.payload = value
-                    node.send(msg)
-                } else {
-                    vl53l0x.startContinuous()
+    this.debug(util.inspect(node), util.inspect(vl53l0x))
+    node.status({fill: 'red', shape: 'ring', text: 'pollstop'})
 
-                    node.intervalId = setInterval(function () {
-                        var value = vl53l0x.readRangeContinuousMillimeters()
-                        msg.payload = value
-                        node.send(msg)
-                    }, node.interval)
+    node.on('close', function (removed, done) {
+      vl53l0x.close()
+      done()
+    })
 
-                    node.status({fill:"green", shape:"dot", text:"pollstart"})
-                };
-            }
-            else if (msg.payload=="stop") {
-                if (node.interval==0) {
-                    // Nothing to stop
-                } else {
-                    if (node.intervalId) {
-                        clearInterval(node.intervalId);
-                    }
+    node.on('input', function (msg) {
+      if (msg.payload === 'start') {
+        if (node.interval === 0) {
+          var value = vl53l0x.readRangeSingleMillimeters()
+          msg.payload = value
+          node.send(msg)
+        } else {
+          vl53l0x.startContinuous()
 
-                    vl53l0x.stopContinuous()
-                    node.status({fill:"red", shape:"ring", text:"pollstop"})
-                }
-            }
-            
-        });
-    }
-    RED.nodes.registerType("vl53l0x",Vl53l0xNode);
+          node.intervalId = setInterval(function () {
+            var value = vl53l0x.readRangeContinuousMillimeters()
+            msg.payload = value
+            node.send(msg)
+          }, node.interval)
 
+          node.status({fill: 'green', shape: 'dot', text: 'pollstart'})
+        };
+      } else if (msg.payload === 'stop') {
+        if (node.interval === 0) {
+          // Nothing to stop
+        } else {
+          if (node.intervalId) {
+            clearInterval(node.intervalId)
+          }
+
+          vl53l0x.stopContinuous()
+          node.status({fill: 'red', shape: 'ring', text: 'pollstop'})
+        }
+      }
+    })
+  }
+  RED.nodes.registerType('vl53l0x', Vl53l0xNode)
 }
