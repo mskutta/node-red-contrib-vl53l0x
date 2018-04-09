@@ -31,7 +31,7 @@ module.exports = function (RED) {
     var vl53l0x = new Vl53l0x(node.bus, node.address)
     vl53l0x.init()
 
-    this.debug(util.inspect(node), util.inspect(vl53l0x))
+    console.log(util.inspect(node), util.inspect(vl53l0x))
     node.status({fill: 'red', shape: 'ring', text: 'pollstop'})
 
     node.on('close', function (removed, done) {

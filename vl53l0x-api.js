@@ -9,6 +9,7 @@
 var i2c = require('i2c-bus')
 
 module.exports = function (busNumber = 1, address = 0x29) {
+  var self = this
   var i2cBus = i2c.openSync(busNumber)
 
   // Constants
@@ -108,7 +109,9 @@ module.exports = function (busNumber = 1, address = 0x29) {
 
   // Record the current time to check an upcoming timeout against
   var timeoutStartMs
-  function startTimeout () { timeoutStartMs = new Date() }
+  function startTimeout () {
+    timeoutStartMs = new Date()
+  }
 
   // Check if timeout is enabled (set to nonzero value) and has expired
   var ioTimeout = 0
@@ -139,7 +142,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
   // Public Methods //////////////////////////////////////////////////////////////
 
   this.setAddress = function (newAddr) {
-    this.writeReg(I2C_SLAVE_DEVICE_ADDRESS, newAddr & 0x7F)
+    writeReg(I2C_SLAVE_DEVICE_ADDRESS, newAddr & 0x7F)
     address = newAddr
   }
 
@@ -148,28 +151,28 @@ module.exports = function (busNumber = 1, address = 0x29) {
 
     // sensor uses 1V8 mode for I/O by default; switch to 2V8 mode if necessary
     if (io2v8) {
-      this.writeReg(VHV_CONFIG_PAD_SCL_SDA__EXTSUP_HV,
-        this.readReg(VHV_CONFIG_PAD_SCL_SDA__EXTSUP_HV) || 0x01) // set bit 0
+      writeReg(VHV_CONFIG_PAD_SCL_SDA__EXTSUP_HV,
+        readReg(VHV_CONFIG_PAD_SCL_SDA__EXTSUP_HV) || 0x01) // set bit 0
     }
 
     // "Set I2C standard mode"
-    this.writeReg(0x88, 0x00)
+    writeReg(0x88, 0x00)
 
-    this.writeReg(0x80, 0x01)
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x00, 0x00)
-    stopVariable = this.readReg(0x91)
-    this.writeReg(0x00, 0x01)
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(0x80, 0x00)
+    writeReg(0x80, 0x01)
+    writeReg(0xFF, 0x01)
+    writeReg(0x00, 0x00)
+    stopVariable = readReg(0x91)
+    writeReg(0x00, 0x01)
+    writeReg(0xFF, 0x00)
+    writeReg(0x80, 0x00)
 
     // disable SIGNAL_RATE_MSRC (bit 1) and SIGNAL_RATE_PRE_RANGE (bit 4) limit checks
-    this.writeReg(MSRC_CONFIG_CONTROL, this.readReg(MSRC_CONFIG_CONTROL) || 0x12)
+    writeReg(MSRC_CONFIG_CONTROL, readReg(MSRC_CONFIG_CONTROL) || 0x12)
 
     // set final range signal rate limit to 0.25 MCPS (million counts per second)
     this.setSignalRateLimit(0.25)
 
-    this.writeReg(SYSTEM_SEQUENCE_CONFIG, 0xFF)
+    writeReg(SYSTEM_SEQUENCE_CONFIG, 0xFF)
 
     // VL53L0X_DataInit() end
 
@@ -184,15 +187,15 @@ module.exports = function (busNumber = 1, address = 0x29) {
     // the API, but the same data seems to be more easily readable from
     // GLOBAL_CONFIG_SPAD_ENABLES_REF_0 through _6, so read it from there
     var refSpadMap = new Uint8Array(6)
-    this.readMulti(GLOBAL_CONFIG_SPAD_ENABLES_REF_0, refSpadMap, 6)
+    readMulti(GLOBAL_CONFIG_SPAD_ENABLES_REF_0, refSpadMap, 6)
 
     // -- VL53L0X_set_reference_spads() begin (assume NVM values are valid)
 
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(DYNAMIC_SPAD_REF_EN_START_OFFSET, 0x00)
-    this.writeReg(DYNAMIC_SPAD_NUM_REQUESTED_REF_SPAD, 0x2C)
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(GLOBAL_CONFIG_REF_EN_START_SELECT, 0xB4)
+    writeReg(0xFF, 0x01)
+    writeReg(DYNAMIC_SPAD_REF_EN_START_OFFSET, 0x00)
+    writeReg(DYNAMIC_SPAD_NUM_REQUESTED_REF_SPAD, 0x2C)
+    writeReg(0xFF, 0x00)
+    writeReg(GLOBAL_CONFIG_REF_EN_START_SELECT, 0xB4)
 
     var firstSpadToEnable = spadTypeIsAperture ? 12 : 0 // 12 is the first aperture spad
     var spadsEnabled = 0
@@ -207,115 +210,115 @@ module.exports = function (busNumber = 1, address = 0x29) {
       }
     }
 
-    this.writeMulti(GLOBAL_CONFIG_SPAD_ENABLES_REF_0, refSpadMap, 6)
+    writeMulti(GLOBAL_CONFIG_SPAD_ENABLES_REF_0, refSpadMap, 6)
 
     // -- VL53L0X_set_reference_spads() end
 
     // -- VL53L0X_load_tuning_settings() begin
     // DefaultTuningSettings from vl53l0x_tuning.h
 
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x00, 0x00)
+    writeReg(0xFF, 0x01)
+    writeReg(0x00, 0x00)
 
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(0x09, 0x00)
-    this.writeReg(0x10, 0x00)
-    this.writeReg(0x11, 0x00)
+    writeReg(0xFF, 0x00)
+    writeReg(0x09, 0x00)
+    writeReg(0x10, 0x00)
+    writeReg(0x11, 0x00)
 
-    this.writeReg(0x24, 0x01)
-    this.writeReg(0x25, 0xFF)
-    this.writeReg(0x75, 0x00)
+    writeReg(0x24, 0x01)
+    writeReg(0x25, 0xFF)
+    writeReg(0x75, 0x00)
 
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x4E, 0x2C)
-    this.writeReg(0x48, 0x00)
-    this.writeReg(0x30, 0x20)
+    writeReg(0xFF, 0x01)
+    writeReg(0x4E, 0x2C)
+    writeReg(0x48, 0x00)
+    writeReg(0x30, 0x20)
 
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(0x30, 0x09)
-    this.writeReg(0x54, 0x00)
-    this.writeReg(0x31, 0x04)
-    this.writeReg(0x32, 0x03)
-    this.writeReg(0x40, 0x83)
-    this.writeReg(0x46, 0x25)
-    this.writeReg(0x60, 0x00)
-    this.writeReg(0x27, 0x00)
-    this.writeReg(0x50, 0x06)
-    this.writeReg(0x51, 0x00)
-    this.writeReg(0x52, 0x96)
-    this.writeReg(0x56, 0x08)
-    this.writeReg(0x57, 0x30)
-    this.writeReg(0x61, 0x00)
-    this.writeReg(0x62, 0x00)
-    this.writeReg(0x64, 0x00)
-    this.writeReg(0x65, 0x00)
-    this.writeReg(0x66, 0xA0)
+    writeReg(0xFF, 0x00)
+    writeReg(0x30, 0x09)
+    writeReg(0x54, 0x00)
+    writeReg(0x31, 0x04)
+    writeReg(0x32, 0x03)
+    writeReg(0x40, 0x83)
+    writeReg(0x46, 0x25)
+    writeReg(0x60, 0x00)
+    writeReg(0x27, 0x00)
+    writeReg(0x50, 0x06)
+    writeReg(0x51, 0x00)
+    writeReg(0x52, 0x96)
+    writeReg(0x56, 0x08)
+    writeReg(0x57, 0x30)
+    writeReg(0x61, 0x00)
+    writeReg(0x62, 0x00)
+    writeReg(0x64, 0x00)
+    writeReg(0x65, 0x00)
+    writeReg(0x66, 0xA0)
 
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x22, 0x32)
-    this.writeReg(0x47, 0x14)
-    this.writeReg(0x49, 0xFF)
-    this.writeReg(0x4A, 0x00)
+    writeReg(0xFF, 0x01)
+    writeReg(0x22, 0x32)
+    writeReg(0x47, 0x14)
+    writeReg(0x49, 0xFF)
+    writeReg(0x4A, 0x00)
 
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(0x7A, 0x0A)
-    this.writeReg(0x7B, 0x00)
-    this.writeReg(0x78, 0x21)
+    writeReg(0xFF, 0x00)
+    writeReg(0x7A, 0x0A)
+    writeReg(0x7B, 0x00)
+    writeReg(0x78, 0x21)
 
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x23, 0x34)
-    this.writeReg(0x42, 0x00)
-    this.writeReg(0x44, 0xFF)
-    this.writeReg(0x45, 0x26)
-    this.writeReg(0x46, 0x05)
-    this.writeReg(0x40, 0x40)
-    this.writeReg(0x0E, 0x06)
-    this.writeReg(0x20, 0x1A)
-    this.writeReg(0x43, 0x40)
+    writeReg(0xFF, 0x01)
+    writeReg(0x23, 0x34)
+    writeReg(0x42, 0x00)
+    writeReg(0x44, 0xFF)
+    writeReg(0x45, 0x26)
+    writeReg(0x46, 0x05)
+    writeReg(0x40, 0x40)
+    writeReg(0x0E, 0x06)
+    writeReg(0x20, 0x1A)
+    writeReg(0x43, 0x40)
 
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(0x34, 0x03)
-    this.writeReg(0x35, 0x44)
+    writeReg(0xFF, 0x00)
+    writeReg(0x34, 0x03)
+    writeReg(0x35, 0x44)
 
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x31, 0x04)
-    this.writeReg(0x4B, 0x09)
-    this.writeReg(0x4C, 0x05)
-    this.writeReg(0x4D, 0x04)
+    writeReg(0xFF, 0x01)
+    writeReg(0x31, 0x04)
+    writeReg(0x4B, 0x09)
+    writeReg(0x4C, 0x05)
+    writeReg(0x4D, 0x04)
 
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(0x44, 0x00)
-    this.writeReg(0x45, 0x20)
-    this.writeReg(0x47, 0x08)
-    this.writeReg(0x48, 0x28)
-    this.writeReg(0x67, 0x00)
-    this.writeReg(0x70, 0x04)
-    this.writeReg(0x71, 0x01)
-    this.writeReg(0x72, 0xFE)
-    this.writeReg(0x76, 0x00)
-    this.writeReg(0x77, 0x00)
+    writeReg(0xFF, 0x00)
+    writeReg(0x44, 0x00)
+    writeReg(0x45, 0x20)
+    writeReg(0x47, 0x08)
+    writeReg(0x48, 0x28)
+    writeReg(0x67, 0x00)
+    writeReg(0x70, 0x04)
+    writeReg(0x71, 0x01)
+    writeReg(0x72, 0xFE)
+    writeReg(0x76, 0x00)
+    writeReg(0x77, 0x00)
 
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x0D, 0x01)
+    writeReg(0xFF, 0x01)
+    writeReg(0x0D, 0x01)
 
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(0x80, 0x01)
-    this.writeReg(0x01, 0xF8)
+    writeReg(0xFF, 0x00)
+    writeReg(0x80, 0x01)
+    writeReg(0x01, 0xF8)
 
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x8E, 0x01)
-    this.writeReg(0x00, 0x01)
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(0x80, 0x00)
+    writeReg(0xFF, 0x01)
+    writeReg(0x8E, 0x01)
+    writeReg(0x00, 0x01)
+    writeReg(0xFF, 0x00)
+    writeReg(0x80, 0x00)
 
     // -- VL53L0X_load_tuning_settings() end
 
     // "Set interrupt config to new sample ready"
     // -- VL53L0X_SetGpioConfig() begin
 
-    this.writeReg(SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04)
-    this.writeReg(GPIO_HV_MUX_ACTIVE_HIGH, this.readReg(GPIO_HV_MUX_ACTIVE_HIGH) & ~0x10) // active low
-    this.writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01)
+    writeReg(SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04)
+    writeReg(GPIO_HV_MUX_ACTIVE_HIGH, readReg(GPIO_HV_MUX_ACTIVE_HIGH) & ~0x10) // active low
+    writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01)
 
     // -- VL53L0X_SetGpioConfig() end
 
@@ -326,7 +329,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
     // TCC = Target CentreCheck
     // -- VL53L0X_SetSequenceStepEnable() begin
 
-    this.writeReg(SYSTEM_SEQUENCE_CONFIG, 0xE8)
+    writeReg(SYSTEM_SEQUENCE_CONFIG, 0xE8)
 
     // -- VL53L0X_SetSequenceStepEnable() end
 
@@ -339,80 +342,24 @@ module.exports = function (busNumber = 1, address = 0x29) {
 
     // -- VL53L0X_perform_vhv_calibration() begin
 
-    this.writeReg(SYSTEM_SEQUENCE_CONFIG, 0x01)
+    writeReg(SYSTEM_SEQUENCE_CONFIG, 0x01)
     if (!performSingleRefCalibration(0x40)) { return false }
 
     // -- VL53L0X_perform_vhv_calibration() end
 
     // -- VL53L0X_perform_phase_calibration() begin
 
-    this.writeReg(SYSTEM_SEQUENCE_CONFIG, 0x02)
+    writeReg(SYSTEM_SEQUENCE_CONFIG, 0x02)
     if (!performSingleRefCalibration(0x00)) { return false }
 
     // -- VL53L0X_perform_phase_calibration() end
 
     // "restore the previous Sequence Config"
-    this.writeReg(SYSTEM_SEQUENCE_CONFIG, 0xE8)
+    writeReg(SYSTEM_SEQUENCE_CONFIG, 0xE8)
 
     // VL53L0X_PerformRefCalibration() end
 
     return true
-  }
-
-  // Write an 8-bit register
-  this.writeReg = function (reg, value) {
-    i2cBus.writeByteSync(address, reg, value)
-  }
-
-  // Write a 16-bit register
-  this.writeReg16Bit = function (reg, value) {
-    i2cBus.writeWordSync(address, reg, value)
-  }
-
-  // Write a 32-bit register
-  this.writeReg32Bit = function (reg, value) {
-    // TODO: confirm logic
-    var src = []
-    src.push((value >> 24) & 0xFF)
-    src.push((value >> 16) & 0xFF)
-    src.push((value >> 8) & 0xFF)
-    src.push(value & 0xFF)
-
-    this.writeMulti(reg, src, 4)
-  }
-
-  // Read an 8-bit register
-  this.readReg = function (reg) {
-    i2cBus.readByteSync(address, reg)
-  }
-
-  // Read a 16-bit register
-  this.readReg16Bit = function (reg) {
-    i2cBus.readWordSync(address, reg)
-  }
-
-  // Read a 32-bit register
-  this.readReg32Bit = function (reg) {
-    var dst = []
-    this.readMulti(reg, 4, dst)
-    var value = dst[0] << 24 // value highest byte
-    value |= dst[1] << 16
-    value |= dst[2] << 8
-    value |= dst[3] // value lowest byte
-
-    return value
-  }
-
-  // Write an arbitrary number of bytes from the given array to the sensor,
-  // starting at the given register
-  this.writeMulti = function (reg, src, count) {
-    i2cBus.writeI2cBlockSync(address, reg, count, src)
-  }
-
-  // Read an arbitrary number of bytes from the sensor, starting at the given
-  // register, into the given array
-  this.readMulti = function (reg, dst, count) {
-    i2cBus.readI2cBlockSync(address, reg, count, dst)
   }
 
   // Set the return signal rate limit check value in units of MCPS (mega counts
@@ -427,13 +374,13 @@ module.exports = function (busNumber = 1, address = 0x29) {
     if (limitMcps < 0 || limitMcps > 511.99) { return false }
 
     // Q9.7 fixed point format (9 integer bits, 7 fractional bits)
-    this.writeReg16Bit(FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT, limitMcps * (1 << 7))
+    writeReg16Bit(FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT, limitMcps * (1 << 7))
     return true
   }
 
   // Get the return signal rate limit check value in MCPS
   this.getSignalRateLimit = function () {
-    return this.readReg16Bit(FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT) / (1 << 7)
+    return readReg16Bit(FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT) / (1 << 7)
   }
 
   // Set the measurement timing budget in microseconds, which is the time allowed
@@ -510,7 +457,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
         finalRangeTimeoutMclks += timeouts.pre_range_mclks
       }
 
-      this.writeReg16Bit(FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI,
+      writeReg16Bit(FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI,
         encodeTimeout(finalRangeTimeoutMclks))
 
       // set_sequence_step_timeout() end
@@ -595,29 +542,29 @@ module.exports = function (busNumber = 1, address = 0x29) {
       // "Set phase check limits"
       switch (periodPclks) {
         case 12:
-          this.writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x18)
+          writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x18)
           break
 
         case 14:
-          this.writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x30)
+          writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x30)
           break
 
         case 16:
-          this.writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x40)
+          writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x40)
           break
 
         case 18:
-          this.writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x50)
+          writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x50)
           break
 
         default:
           // invalid period
           return false
       }
-      this.writeReg(PRE_RANGE_CONFIG_VALID_PHASE_LOW, 0x08)
+      writeReg(PRE_RANGE_CONFIG_VALID_PHASE_LOW, 0x08)
 
       // apply new VCSEL period
-      this.writeReg(PRE_RANGE_CONFIG_VCSEL_PERIOD, vcselPeriodReg)
+      writeReg(PRE_RANGE_CONFIG_VCSEL_PERIOD, vcselPeriodReg)
 
       // update timeouts
 
@@ -627,7 +574,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
       var newPreRangeTimeoutMclks =
         timeoutMicrosecondsToMclks(timeouts.pre_range_us, periodPclks)
 
-      this.writeReg16Bit(PRE_RANGE_CONFIG_TIMEOUT_MACROP_HI,
+      writeReg16Bit(PRE_RANGE_CONFIG_TIMEOUT_MACROP_HI,
         encodeTimeout(newPreRangeTimeoutMclks))
 
       // set_sequence_step_timeout() end
@@ -638,50 +585,50 @@ module.exports = function (busNumber = 1, address = 0x29) {
       var newMsrcTimeoutMclks =
         timeoutMicrosecondsToMclks(timeouts.msrc_dss_tcc_us, periodPclks)
 
-      this.writeReg(MSRC_CONFIG_TIMEOUT_MACROP,
+      writeReg(MSRC_CONFIG_TIMEOUT_MACROP,
         (newMsrcTimeoutMclks > 256) ? 255 : (newMsrcTimeoutMclks - 1))
 
       // set_sequence_step_timeout() end
     } else if (type === VcselPeriodRange.Final) {
       switch (periodPclks) {
         case 8:
-          this.writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x10)
-          this.writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08)
-          this.writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x02)
-          this.writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x0C)
-          this.writeReg(0xFF, 0x01)
-          this.writeReg(ALGO_PHASECAL_LIM, 0x30)
-          this.writeReg(0xFF, 0x00)
+          writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x10)
+          writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08)
+          writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x02)
+          writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x0C)
+          writeReg(0xFF, 0x01)
+          writeReg(ALGO_PHASECAL_LIM, 0x30)
+          writeReg(0xFF, 0x00)
           break
 
         case 10:
-          this.writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x28)
-          this.writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08)
-          this.writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03)
-          this.writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x09)
-          this.writeReg(0xFF, 0x01)
-          this.writeReg(ALGO_PHASECAL_LIM, 0x20)
-          this.writeReg(0xFF, 0x00)
+          writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x28)
+          writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08)
+          writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03)
+          writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x09)
+          writeReg(0xFF, 0x01)
+          writeReg(ALGO_PHASECAL_LIM, 0x20)
+          writeReg(0xFF, 0x00)
           break
 
         case 12:
-          this.writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x38)
-          this.writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08)
-          this.writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03)
-          this.writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x08)
-          this.writeReg(0xFF, 0x01)
-          this.writeReg(ALGO_PHASECAL_LIM, 0x20)
-          this.writeReg(0xFF, 0x00)
+          writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x38)
+          writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08)
+          writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03)
+          writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x08)
+          writeReg(0xFF, 0x01)
+          writeReg(ALGO_PHASECAL_LIM, 0x20)
+          writeReg(0xFF, 0x00)
           break
 
         case 14:
-          this.writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x48)
-          this.writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08)
-          this.writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03)
-          this.writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x07)
-          this.writeReg(0xFF, 0x01)
-          this.writeReg(ALGO_PHASECAL_LIM, 0x20)
-          this.writeReg(0xFF, 0x00)
+          writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x48)
+          writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08)
+          writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03)
+          writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x07)
+          writeReg(0xFF, 0x01)
+          writeReg(ALGO_PHASECAL_LIM, 0x20)
+          writeReg(0xFF, 0x00)
           break
 
         default:
@@ -690,7 +637,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
       }
 
       // apply new VCSEL period
-      this.writeReg(FINAL_RANGE_CONFIG_VCSEL_PERIOD, vcselPeriodReg)
+      writeReg(FINAL_RANGE_CONFIG_VCSEL_PERIOD, vcselPeriodReg)
 
       // update timeouts
 
@@ -709,7 +656,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
         newFinalRangeTimeoutMclks += timeouts.pre_range_mclks
       }
 
-      this.writeReg16Bit(FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI,
+      writeReg16Bit(FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI,
         encodeTimeout(newFinalRangeTimeoutMclks))
 
       // set_sequence_step_timeout end
@@ -725,10 +672,10 @@ module.exports = function (busNumber = 1, address = 0x29) {
     // "Perform the phase calibration. This is needed after changing on vcsel period."
     // VL53L0X_perform_phase_calibration() begin
 
-    var sequenceConfig = this.readReg(SYSTEM_SEQUENCE_CONFIG)
-    this.writeReg(SYSTEM_SEQUENCE_CONFIG, 0x02)
+    var sequenceConfig = readReg(SYSTEM_SEQUENCE_CONFIG)
+    writeReg(SYSTEM_SEQUENCE_CONFIG, 0x02)
     performSingleRefCalibration(0x0)
-    this.writeReg(SYSTEM_SEQUENCE_CONFIG, sequenceConfig)
+    writeReg(SYSTEM_SEQUENCE_CONFIG, sequenceConfig)
 
     // VL53L0X_perform_phase_calibration() end
 
@@ -739,9 +686,9 @@ module.exports = function (busNumber = 1, address = 0x29) {
   // based on VL53L0X_get_vcsel_pulse_period()
   this.getVcselPulsePeriod = function (type) {
     if (type === VcselPeriodRange.Pre) {
-      return decodeVcselPeriod(this.readReg(PRE_RANGE_CONFIG_VCSEL_PERIOD))
+      return decodeVcselPeriod(readReg(PRE_RANGE_CONFIG_VCSEL_PERIOD))
     } else if (type === VcselPeriodRange.Final) {
-      return decodeVcselPeriod(this.readReg(FINAL_RANGE_CONFIG_VCSEL_PERIOD))
+      return decodeVcselPeriod(readReg(FINAL_RANGE_CONFIG_VCSEL_PERIOD))
     } else { return 255 }
   }
 
@@ -752,46 +699,46 @@ module.exports = function (busNumber = 1, address = 0x29) {
   // takes a measurement.
   // based on VL53L0X_StartMeasurement()
   this.startContinuous = function (periodMs = 0) {
-    this.writeReg(0x80, 0x01)
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x00, 0x00)
-    this.writeReg(0x91, stopVariable)
-    this.writeReg(0x00, 0x01)
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(0x80, 0x00)
+    writeReg(0x80, 0x01)
+    writeReg(0xFF, 0x01)
+    writeReg(0x00, 0x00)
+    writeReg(0x91, stopVariable)
+    writeReg(0x00, 0x01)
+    writeReg(0xFF, 0x00)
+    writeReg(0x80, 0x00)
 
     if (periodMs !== 0) {
       // continuous timed mode
 
       // VL53L0X_SetInterMeasurementPeriodMilliSeconds() begin
 
-      var oscCalibrateVal = this.readReg16Bit(OSC_CALIBRATE_VAL)
+      var oscCalibrateVal = readReg16Bit(OSC_CALIBRATE_VAL)
 
       if (oscCalibrateVal !== 0) {
         periodMs *= oscCalibrateVal
       }
 
-      this.writeReg32Bit(SYSTEM_INTERMEASUREMENT_PERIOD, periodMs)
+      writeReg32Bit(SYSTEM_INTERMEASUREMENT_PERIOD, periodMs)
 
       // VL53L0X_SetInterMeasurementPeriodMilliSeconds() end
 
-      this.writeReg(SYSRANGE_START, 0x04) // VL53L0X_REG_SYSRANGE_MODE_TIMED
+      writeReg(SYSRANGE_START, 0x04) // VL53L0X_REG_SYSRANGE_MODE_TIMED
     } else {
       // continuous back-to-back mode
-      this.writeReg(SYSRANGE_START, 0x02) // VL53L0X_REG_SYSRANGE_MODE_BACKTOBACK
+      writeReg(SYSRANGE_START, 0x02) // VL53L0X_REG_SYSRANGE_MODE_BACKTOBACK
     }
   }
 
   // Stop continuous measurements
   // based on VL53L0X_StopMeasurement()
   this.stopContinuous = function () {
-    this.writeReg(SYSRANGE_START, 0x01) // VL53L0X_REG_SYSRANGE_MODE_SINGLESHOT
+    writeReg(SYSRANGE_START, 0x01) // VL53L0X_REG_SYSRANGE_MODE_SINGLESHOT
 
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x00, 0x00)
-    this.writeReg(0x91, 0x00)
-    this.writeReg(0x00, 0x01)
-    this.writeReg(0xFF, 0x00)
+    writeReg(0xFF, 0x01)
+    writeReg(0x00, 0x00)
+    writeReg(0x91, 0x00)
+    writeReg(0x00, 0x01)
+    writeReg(0xFF, 0x00)
   }
 
   // Returns a range reading in millimeters when continuous mode is active
@@ -799,16 +746,16 @@ module.exports = function (busNumber = 1, address = 0x29) {
   // single-shot range measurement)
   this.readRangeContinuousMillimeters = function () {
     startTimeout()
-    while ((this.readReg(RESULT_INTERRUPT_STATUS) & 0x07) === 0) {
+    while ((readReg(RESULT_INTERRUPT_STATUS) & 0x07) === 0) {
       if (checkTimeoutExpired()) {
         return 65535
       }
     }
     // assumptions: Linearity Corrective Gain is 1000 (default);
     // fractional ranging is not enabled
-    var range = this.readReg16Bit(RESULT_RANGE_STATUS + 10)
+    var range = readReg16Bit(RESULT_RANGE_STATUS + 10)
 
-    this.writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01)
+    writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01)
 
     return range
   }
@@ -817,19 +764,19 @@ module.exports = function (busNumber = 1, address = 0x29) {
   // millimeters
   // based on VL53L0X_PerformSingleRangingMeasurement()
   this.readRangeSingleMillimeters = function () {
-    this.writeReg(0x80, 0x01)
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x00, 0x00)
-    this.writeReg(0x91, stopVariable)
-    this.writeReg(0x00, 0x01)
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(0x80, 0x00)
+    writeReg(0x80, 0x01)
+    writeReg(0xFF, 0x01)
+    writeReg(0x00, 0x00)
+    writeReg(0x91, stopVariable)
+    writeReg(0x00, 0x01)
+    writeReg(0xFF, 0x00)
+    writeReg(0x80, 0x00)
 
-    this.writeReg(SYSRANGE_START, 0x01)
+    writeReg(SYSRANGE_START, 0x01)
 
     // "Wait until start bit has been cleared"
     startTimeout()
-    while (this.readReg(SYSRANGE_START) & 0x01) {
+    while (readReg(SYSRANGE_START) & 0x01) {
       if (checkTimeoutExpired()) {
         return 65535
       }
@@ -844,43 +791,87 @@ module.exports = function (busNumber = 1, address = 0x29) {
 
   // Private Methods /////////////////////////////////////////////////////////////
 
+  // Write an 8-bit register
+  function writeReg (reg, value) {
+    i2cBus.writeByteSync(address, reg, value)
+  }
+
+  // Write a 16-bit register
+  function writeReg16Bit (reg, value) {
+    i2cBus.writeWordSync(address, reg, value)
+  }
+
+  // Write a 32-bit register
+  function writeReg32Bit (reg, value) {
+    // TODO: confirm logic
+    var src = []
+    src.push((value >> 24) & 0xFF)
+    src.push((value >> 16) & 0xFF)
+    src.push((value >> 8) & 0xFF)
+    src.push(value & 0xFF)
+
+    writeMulti(reg, src, 4)
+  }
+
+  // Read an 8-bit register
+  function readReg (reg) {
+    return i2cBus.readByteSync(address, reg)
+  }
+
+  // Read a 16-bit register
+  function readReg16Bit (reg) {
+    return i2cBus.readWordSync(address, reg)
+  }
+
+  // Write an arbitrary number of bytes from the given array to the sensor,
+  // starting at the given register
+  function writeMulti (reg, src, count) {
+    i2cBus.writeI2cBlockSync(address, reg, count, src)
+  }
+
+  // Read an arbitrary number of bytes from the sensor, starting at the given
+  // register, into the given array
+  function readMulti (reg, dst, count) {
+    i2cBus.readI2cBlockSync(address, reg, count, dst)
+  }
+
   // Get reference SPAD (single photon avalanche diode) count and type
   // based on VL53L0X_get_info_from_device(),
   // but only gets reference SPAD count and type
   function getSpadInfo () {
     var spad = {}
 
-    this.writeReg(0x80, 0x01)
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x00, 0x00)
+    writeReg(0x80, 0x01)
+    writeReg(0xFF, 0x01)
+    writeReg(0x00, 0x00)
 
-    this.writeReg(0xFF, 0x06)
-    this.writeReg(0x83, this.readReg(0x83) || 0x04)
-    this.writeReg(0xFF, 0x07)
-    this.writeReg(0x81, 0x01)
+    writeReg(0xFF, 0x06)
+    writeReg(0x83, readReg(0x83) || 0x04)
+    writeReg(0xFF, 0x07)
+    writeReg(0x81, 0x01)
 
-    this.writeReg(0x80, 0x01)
+    writeReg(0x80, 0x01)
 
-    this.writeReg(0x94, 0x6b)
-    this.writeReg(0x83, 0x00)
+    writeReg(0x94, 0x6b)
+    writeReg(0x83, 0x00)
     startTimeout()
-    while (this.readReg(0x83) === 0x00) {
+    while (readReg(0x83) === 0x00) {
       if (checkTimeoutExpired()) { return false }
     }
-    this.writeReg(0x83, 0x01)
-    var tmp = this.readReg(0x92)
+    writeReg(0x83, 0x01)
+    var tmp = readReg(0x92)
 
     spad.count = tmp & 0x7f
     spad.type_is_aperture = (tmp >> 7) & 0x01
 
-    this.writeReg(0x81, 0x00)
-    this.writeReg(0xFF, 0x06)
-    this.writeReg(0x83, this.readReg(0x83) & ~0x04)
-    this.writeReg(0xFF, 0x01)
-    this.writeReg(0x00, 0x01)
+    writeReg(0x81, 0x00)
+    writeReg(0xFF, 0x06)
+    writeReg(0x83, readReg(0x83) & ~0x04)
+    writeReg(0xFF, 0x01)
+    writeReg(0x00, 0x01)
 
-    this.writeReg(0xFF, 0x00)
-    this.writeReg(0x80, 0x00)
+    writeReg(0xFF, 0x00)
+    writeReg(0x80, 0x00)
 
     return spad
   }
@@ -888,7 +879,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
   // Get sequence step enables
   // based on VL53L0X_GetSequenceStepEnables()
   function getSequenceStepEnables (enables) {
-    var sequenceConfig = this.readReg(SYSTEM_SEQUENCE_CONFIG)
+    var sequenceConfig = readReg(SYSTEM_SEQUENCE_CONFIG)
 
     enables.tcc = (sequenceConfig >> 4) & 0x1
     enables.dss = (sequenceConfig >> 3) & 0x1
@@ -902,23 +893,23 @@ module.exports = function (busNumber = 1, address = 0x29) {
   // but gets all timeouts instead of just the requested one, and also stores
   // intermediate values
   function getSequenceStepTimeouts (enables, timeouts) {
-    timeouts.pre_range_vcsel_period_pclks = this.getVcselPulsePeriod(VcselPeriodRange.Pre)
+    timeouts.pre_range_vcsel_period_pclks = self.getVcselPulsePeriod(VcselPeriodRange.Pre)
 
-    timeouts.msrc_dss_tcc_mclks = this.readReg(MSRC_CONFIG_TIMEOUT_MACROP) + 1
+    timeouts.msrc_dss_tcc_mclks = readReg(MSRC_CONFIG_TIMEOUT_MACROP) + 1
     timeouts.msrc_dss_tcc_us =
       timeoutMclksToMicroseconds(timeouts.msrc_dss_tcc_mclks,
         timeouts.pre_range_vcsel_period_pclks)
 
     timeouts.pre_range_mclks =
-      decodeTimeout(this.readReg16Bit(PRE_RANGE_CONFIG_TIMEOUT_MACROP_HI))
+      decodeTimeout(readReg16Bit(PRE_RANGE_CONFIG_TIMEOUT_MACROP_HI))
     timeouts.pre_range_us =
       timeoutMclksToMicroseconds(timeouts.pre_range_mclks,
         timeouts.pre_range_vcsel_period_pclks)
 
-    timeouts.final_range_vcsel_period_pclks = this.getVcselPulsePeriod(VcselPeriodRange.Final)
+    timeouts.final_range_vcsel_period_pclks = self.getVcselPulsePeriod(VcselPeriodRange.Final)
 
     timeouts.final_range_mclks =
-      decodeTimeout(this.readReg16Bit(FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI))
+      decodeTimeout(readReg16Bit(FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI))
 
     if (enables.pre_range) {
       timeouts.final_range_mclks -= timeouts.pre_range_mclks
@@ -979,16 +970,16 @@ module.exports = function (busNumber = 1, address = 0x29) {
 
   // based on VL53L0X_perform_single_ref_calibration()
   function performSingleRefCalibration (vhvInitByte) {
-    this.writeReg(SYSRANGE_START, 0x01 | vhvInitByte) // VL53L0X_REG_SYSRANGE_MODE_START_STOP
+    writeReg(SYSRANGE_START, 0x01 | vhvInitByte) // VL53L0X_REG_SYSRANGE_MODE_START_STOP
 
     startTimeout()
-    while ((this.readReg(RESULT_INTERRUPT_STATUS) & 0x07) === 0) {
+    while ((readReg(RESULT_INTERRUPT_STATUS) & 0x07) === 0) {
       if (checkTimeoutExpired()) { return false }
     }
 
-    this.writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01)
+    writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01)
 
-    this.writeReg(SYSRANGE_START, 0x00)
+    writeReg(SYSRANGE_START, 0x00)
 
     return true
   }
