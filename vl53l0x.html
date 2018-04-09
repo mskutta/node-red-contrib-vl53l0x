@@ -1,8 +1,11 @@
 <script type="text/javascript">
     RED.nodes.registerType('vl53l0x',{
-        category: 'function',
+        category: 'advanced-input',
         color: '#a6bbcf',
         defaults: {
+            bus: {value:"1", required:true},
+            address: {value:"0x29", required:true, validate:RED.validators.number()},
+            interval: {value:"100", required:false, validate:RED.validators.number()},
             name: {value:""}
         },
         inputs:1,
@@ -16,12 +19,19 @@
 
 <script type="text/x-red" data-template-name="vl53l0x">
     <div class="form-row">
-        <label for="node-input-bus"><i class="fa fa-address-card-o"></i> Bus</label>
-        <input type="number" id="node-input-bus" class="vl53l0x-bus" placeholder="[msg.bus]" min=0 max=1>
+        <label for="node-input-bus"><i class="icon-asterisk"></i> Bus</label>
+        <select type="text" id="node-input-bus" style="width: 150px;">
+          <option value="0">ic2-0</option>
+          <option value="1">ic2-1</option>
+        </select>
     </div>
     <div class="form-row">
         <label for="node-input-address"><i class="fa fa-address-card-o"></i> Bus Address</label>
-        <input type="number" id="node-input-address" class="vl53l0x-address" placeholder="[msg.address]" min=3 max=127>
+        <input type="number" id="node-input-address" class="vl53l0x-address" placeholder="Address" min=3 max=127>
+    </div>
+    <div class="form-row">
+        <label for="node-input-interval"><i class="icon-asterisk"></i> Poll Interval</label>
+        <input type="number" id="node-input-interval" class="vl53l0x-interval" placeholder="Interval" min=3 max=127>
     </div>
     <div class="form-row">
         <label for="node-input-name"><i class="icon-tag"></i> Name</label>
@@ -30,5 +40,5 @@
 </script>
 
 <script type="text/x-red" data-help-name="vl53l0x">
-    <p>A simple node that converts the message payloads into all lower-case characters</p>
+    <p>A Node-RED node to talk to the vl53l0x on the I2C port</p>
 </script>
