@@ -4,9 +4,13 @@
 // VL53L0X datasheet.
 
 // https://github.com/pololu/vl53l0x-arduino/blob/master/VL53L0X.cpp
+// https://github.com/popunder/VL53L0X
+// https://github.com/cassou/VL53L0X_rasp
+// C:\Users\mskutta\Downloads\2017_VL53L0X_lidar_17_0_0_%2812F1840%29.zip
 
 'use strict'
 var i2c = require('i2c-bus')
+var util = require('util')
 
 module.exports = function (busNumber = 1, address = 0x29) {
   var self = this
@@ -97,14 +101,20 @@ module.exports = function (busNumber = 1, address = 0x29) {
   const ALGO_PHASECAL_LIM = 0x30
   const ALGO_PHASECAL_CONFIG_TIMEOUT = 0x30
 
+  var vcselPeriodType = {
+    VcselPeriodPreRange: 0,
+    VcselPeriodFinalRange: 1
+  }
+
   // Defines /////////////////////////////////////////////////////////////////////
 
-  var stopVariable
+  var stopVariable // read by init and used when starting measurement; is StopVariable field of VL53L0X_DevData_t structure in API
   var measurementTimingBudgetUs
+  var ioTimeout = 0
+  var didTimeout = false
 
-  var VcselPeriodRange = {
-    Pre: 0,
-    Final: 1
+  this.setTimeout = function (timeout) {
+    ioTimeout = timeout
   }
 
   // Record the current time to check an upcoming timeout against
@@ -114,7 +124,6 @@ module.exports = function (busNumber = 1, address = 0x29) {
   }
 
   // Check if timeout is enabled (set to nonzero value) and has expired
-  var ioTimeout = 0
   function checkTimeoutExpired () {
     return ioTimeout > 0 && (new Date() - timeoutStartMs) > ioTimeout
   }
@@ -318,7 +327,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
 
     writeReg(SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04)
     writeReg(GPIO_HV_MUX_ACTIVE_HIGH, readReg(GPIO_HV_MUX_ACTIVE_HIGH) & ~0x10) // active low
-    writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01)
+    clearInterruptMask()
 
     // -- VL53L0X_SetGpioConfig() end
 
@@ -394,7 +403,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
     var enables = {}
     var timeouts = {}
 
-    const StartOverhead = 1320 // note that this is different than the value in get_
+    const StartOverhead = 1910
     const EndOverhead = 960
     const MsrcOverhead = 660
     const TccOverhead = 590
@@ -474,7 +483,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
     var enables = {}
     var timeouts = {}
 
-    const StartOverhead = 1910 // note that this is different than the value in set_
+    const StartOverhead = 1910
     const EndOverhead = 960
     const MsrcOverhead = 660
     const TccOverhead = 590
@@ -507,6 +516,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
     }
 
     measurementTimingBudgetUs = budgetUs // store for internal reuse
+
     return budgetUs
   }
 
@@ -538,7 +548,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
     // For the MSRC timeout, the same applies - this timeout being
     // dependant on the pre-range vcsel period."
 
-    if (type === VcselPeriodRange.Pre) {
+    if (type === vcselPeriodType.VcselPeriodPreRange) {
       // "Set phase check limits"
       switch (periodPclks) {
         case 12:
@@ -589,7 +599,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
         (newMsrcTimeoutMclks > 256) ? 255 : (newMsrcTimeoutMclks - 1))
 
       // set_sequence_step_timeout() end
-    } else if (type === VcselPeriodRange.Final) {
+    } else if (type === vcselPeriodType.VcselPeriodFinalRange) {
       switch (periodPclks) {
         case 8:
           writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x10)
@@ -666,7 +676,6 @@ module.exports = function (busNumber = 1, address = 0x29) {
     }
 
     // "Finally, the timing budget must be re-applied"
-
     this.setMeasurementTimingBudget(measurementTimingBudgetUs)
 
     // "Perform the phase calibration. This is needed after changing on vcsel period."
@@ -685,9 +694,9 @@ module.exports = function (busNumber = 1, address = 0x29) {
   // Get the VCSEL pulse period in PCLKs for the given period type.
   // based on VL53L0X_get_vcsel_pulse_period()
   this.getVcselPulsePeriod = function (type) {
-    if (type === VcselPeriodRange.Pre) {
+    if (type === vcselPeriodType.VcselPeriodPreRange) {
       return decodeVcselPeriod(readReg(PRE_RANGE_CONFIG_VCSEL_PERIOD))
-    } else if (type === VcselPeriodRange.Final) {
+    } else if (type === vcselPeriodType.VcselPeriodFinalRange) {
       return decodeVcselPeriod(readReg(FINAL_RANGE_CONFIG_VCSEL_PERIOD))
     } else { return 255 }
   }
@@ -748,6 +757,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
     startTimeout()
     while ((readReg(RESULT_INTERRUPT_STATUS) & 0x07) === 0) {
       if (checkTimeoutExpired()) {
+        didTimeout = true
         return 65535
       }
     }
@@ -755,7 +765,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
     // fractional ranging is not enabled
     var range = readReg16Bit(RESULT_RANGE_STATUS + 10)
 
-    writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01)
+    clearInterruptMask()
 
     return range
   }
@@ -778,11 +788,20 @@ module.exports = function (busNumber = 1, address = 0x29) {
     startTimeout()
     while (readReg(SYSRANGE_START) & 0x01) {
       if (checkTimeoutExpired()) {
+        didTimeout = true
         return 65535
       }
     }
 
     return this.readRangeContinuousMillimeters()
+  }
+
+  // Did a timeout occur in one of the read functions since the last call to
+  // timeoutOccurred()?
+  this.timeoutOccurred = function () {
+    var tmp = didTimeout
+    didTimeout = false
+    return tmp
   }
 
   this.close = function () {
@@ -805,11 +824,10 @@ module.exports = function (busNumber = 1, address = 0x29) {
   function writeReg32Bit (reg, value) {
     // TODO: confirm logic
     var src = []
-    src.push((value >> 24) & 0xFF)
+    src.push((value >> 24) & 0xFF) // value highest byte
     src.push((value >> 16) & 0xFF)
     src.push((value >> 8) & 0xFF)
-    src.push(value & 0xFF)
-
+    src.push(value & 0xFF) // value lowest byte
     writeMulti(reg, src, 4)
   }
 
@@ -893,7 +911,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
   // but gets all timeouts instead of just the requested one, and also stores
   // intermediate values
   function getSequenceStepTimeouts (enables, timeouts) {
-    timeouts.pre_range_vcsel_period_pclks = self.getVcselPulsePeriod(VcselPeriodRange.Pre)
+    timeouts.pre_range_vcsel_period_pclks = self.getVcselPulsePeriod(vcselPeriodType.VcselPeriodPreRange)
 
     timeouts.msrc_dss_tcc_mclks = readReg(MSRC_CONFIG_TIMEOUT_MACROP) + 1
     timeouts.msrc_dss_tcc_us =
@@ -906,7 +924,7 @@ module.exports = function (busNumber = 1, address = 0x29) {
       timeoutMclksToMicroseconds(timeouts.pre_range_mclks,
         timeouts.pre_range_vcsel_period_pclks)
 
-    timeouts.final_range_vcsel_period_pclks = self.getVcselPulsePeriod(VcselPeriodRange.Final)
+    timeouts.final_range_vcsel_period_pclks = self.getVcselPulsePeriod(vcselPeriodType.VcselPeriodFinalRange)
 
     timeouts.final_range_mclks =
       decodeTimeout(readReg16Bit(FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI))
@@ -977,10 +995,26 @@ module.exports = function (busNumber = 1, address = 0x29) {
       if (checkTimeoutExpired()) { return false }
     }
 
-    writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01)
+    clearInterruptMask()
 
     writeReg(SYSRANGE_START, 0x00)
 
     return true
+  }
+
+  function clearInterruptMask () {
+    /* clear bit 0 range interrupt, bit 1 error interrupt */
+    var loopCount = 0
+    var byte
+    do {
+      writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01)
+      writeReg(SYSTEM_INTERRUPT_CLEAR, 0x00)
+      byte = readReg(RESULT_INTERRUPT_STATUS)
+      loopCount++
+    } while (((byte & 0x07) !== 0x00) && (loopCount < 3))
+
+    if (loopCount >= 3) {
+      console.log('INTERRUPT_NOT_CLEARED')
+    }
   }
 }

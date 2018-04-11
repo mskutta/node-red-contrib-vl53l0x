@@ -28,10 +28,12 @@ module.exports = function (RED) {
 
     var node = this
 
+    console.log(util.inspect(node))
+
     var vl53l0x = new Vl53l0x(node.bus, node.address)
     vl53l0x.init()
+    vl53l0x.setTimeout(500)
 
-    console.log(util.inspect(node), util.inspect(vl53l0x))
     node.status({fill: 'red', shape: 'ring', text: 'pollstop'})
 
     node.on('close', function (removed, done) {
@@ -50,6 +52,8 @@ module.exports = function (RED) {
 
           node.intervalId = setInterval(function () {
             var value = vl53l0x.readRangeContinuousMillimeters()
+            // var value = vl53l0x.readRangeSingleMillimeters()
+            if (vl53l0x.timeoutOccurred()) { console.log('[' + new Date().toISOString() + '] VL53L0X TIMEOUT') }
             msg.payload = value
             node.send(msg)
           }, node.interval)
