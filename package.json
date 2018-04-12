@@ -1,7 +1,7 @@
 {
     "name" : "vl53l0x",
     "version" : "0.0.1",
-    "description": "A Node-RED node to talk to the vl53l0x on the I2C port",
+    "description": "A Node-RED node to talk to the vl53l0x on the I2C bus",
     "dependencies": {
         "i2c-bus": "^1.2.2"
     },
@@ -9,7 +9,7 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
-    "license": "Apache-2.0",
+    "license": "MPL-2.0",
     "keywords": [
         "node-red",
         "node-red-contrib",

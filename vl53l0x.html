@@ -4,7 +4,7 @@
         color: '#a6bbcf',
         defaults: {
             bus: {value:"1", required:true},
-            address: {value:"0x29", required:true, validate:RED.validators.number()},
+            address: {value:"41", required:true, validate:RED.validators.number()},
             interval: {value:"100", required:false, validate:RED.validators.number()},
             name: {value:""}
         },
@@ -40,5 +40,5 @@
 </script>
 
 <script type="text/x-red" data-help-name="vl53l0x">
-    <p>A Node-RED node to talk to the vl53l0x on the I2C port</p>
+    <p>A Node-RED node to talk to the vl53l0x on the I2C bus</p>
 </script>
