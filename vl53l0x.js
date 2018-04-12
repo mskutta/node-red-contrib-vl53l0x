@@ -12,8 +12,8 @@
     that just requires that source changes are returned to the community.
     If a copy of the MPL-2.0 was not distributed with this file,
     you can obtain one at http://mozilla.org/MPL/2.0/.
-    @see  LICENSE.txt
-    @see  NOTICE.txt
+    @see  LICENSE
+    @see  NOTICE
 */
 // ==============================================================================
 
