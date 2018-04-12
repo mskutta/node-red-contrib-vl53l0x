@@ -30,6 +30,7 @@ Push msg = {payload : start | stop} to start | stop the flow.
 
 ## Implementation Notes
 
+* The distance in mm is returned as part of the payload.
 * Only doing minimal init and running in "default mode" which is good to about 1200 mm.
 * Calibration routines are not executed on the VL53L0X. A simple calibration tweak routine on the range data is used instead.
 * Using continuous ranging measurements.
